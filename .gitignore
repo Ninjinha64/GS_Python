@@ -1,0 +1,14 @@
+# Byte-compiled / cache Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Ambientes virtuais e variáveis locais com segredos
+.env
+.venv/
+venv/
+
+# Bancos locais e logs transitórios (mantém relatorio_exemplo.json, modelo.pkl, modelo.sha256 e metricas.json)
+saida/*.db
+saida/acesso.log
+saida/relatorio_20*.json

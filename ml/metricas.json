@@ -1,0 +1,64 @@
+{
+  "treinado_em": "2026-11-02T23:03:35.970595+00:00",
+  "amostras": {
+    "total": 707,
+    "ataque": 308,
+    "normal": 399,
+    "reais": 7,
+    "sinteticas": 700
+  },
+  "features": [
+    "fails_auth",
+    "logins_ok",
+    "portas_distintas",
+    "bloqueios_fw",
+    "web_erros",
+    "web_total",
+    "alertas_regra",
+    "em_blacklist"
+  ],
+  "validacao_cruzada_5fold": {
+    "precision": {
+      "media": 0.9836,
+      "desvio": 0.0102
+    },
+    "recall": {
+      "media": 0.9641,
+      "desvio": 0.0192
+    },
+    "f1": {
+      "media": 0.9737,
+      "desvio": 0.0099
+    },
+    "accuracy": {
+      "media": 0.9774,
+      "desvio": 0.0083
+    }
+  },
+  "holdout_25pct": {
+    "normal": {
+      "precision": 0.9611650485436893,
+      "recall": 0.99,
+      "f1-score": 0.9753694581280788,
+      "support": 100.0
+    },
+    "ataque": {
+      "precision": 0.9864864864864865,
+      "recall": 0.948051948051948,
+      "f1-score": 0.9668874172185431,
+      "support": 77.0
+    },
+    "accuracy": 0.9717514124293786
+  },
+  "importancia_features": {
+    "fails_auth": 0.0946,
+    "logins_ok": 0.1263,
+    "portas_distintas": 0.057,
+    "bloqueios_fw": 0.043,
+    "web_erros": 0.0826,
+    "web_total": 0.0986,
+    "alertas_regra": 0.4188,
+    "em_blacklist": 0.0792
+  },
+  "sha256": "c379b7418f5bd30e5676787ba94a5805d854cc9d877462d081c4af5429912919"
+}

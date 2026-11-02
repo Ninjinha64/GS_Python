@@ -1,0 +1,79 @@
+# ==============================================================================
+# docker-compose.yml — SecuraPy Platform (Módulo F — Aula 11)
+# Sobe os 3 serviços juntos conectados na rede `securapy_net`:
+#   1. securapy_app   (API Flask + Dashboard + Servidor TCP de alertas + ML + LLM)
+#   2. securapy_mongo (MongoDB 7 — eventos, alertas e ameaças)
+#   3. securapy_mysql (MySQL 8.0 — operadores e níveis de acesso)
+# ==============================================================================
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: securapy_mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - securapy_net
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mysql:
+    image: mysql:8.0
+    container_name: securapy_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-RootCyberShield2026!}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-securapy}
+      MYSQL_USER: ${MYSQL_USER:-securapy}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-CyberShieldDB2026!}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - securapy_net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  securapy:
+    build: .
+    container_name: securapy_app
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    environment:
+      MONGO_URI: mongodb://mongodb:27017
+      MONGO_DB: securapy
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_USER: ${MYSQL_USER:-securapy}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-CyberShieldDB2026!}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-securapy}
+      SECURAPY_SECRET_KEY: ${SECURAPY_SECRET_KEY:-troque-esta-chave-em-producao-cybershield-2026}
+      SECURAPY_ADMIN_EMAIL: ${SECURAPY_ADMIN_EMAIL:-admin@cybershield.local}
+      SECURAPY_ADMIN_SENHA: ${SECURAPY_ADMIN_SENHA:-CyberShield@2026}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    ports:
+      - "5000:5000"
+      - "9999:9999"
+    networks:
+      - securapy_net
+
+volumes:
+  mongo_data:
+  mysql_data:
+
+networks:
+  securapy_net:
+    driver: bridge

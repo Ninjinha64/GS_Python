@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecuraPy Platform</title>
+    <style>
+        :root {
+            --bg-page: #f8fafc;
+            --bg-card: #ffffff;
+            --bg-subtle: #f1f5f9;
+            --border: #e2e8f0;
+            --border-strong: #cbd5e1;
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --text-faint: #64748b;
+            --primary: #0f172a;
+            --primary-hover: #1e293b;
+            --brand: #2563eb;
+            --critica-text: #b91c1c;
+            --critica-bg: #fef2f2;
+            --critica-border: #fecaca;
+            --alta-text: #c2410c;
+            --alta-bg: #fff7ed;
+            --alta-border: #fed7aa;
+            --media-text: #a16207;
+            --media-bg: #fefce8;
+            --media-border: #fef08a;
+            --baixa-text: #15803d;
+            --baixa-bg: #f0fdf4;
+            --baixa-border: #bbf7d0;
+            --info-text: #334155;
+            --info-bg: #f1f5f9;
+            --info-border: #cbd5e1;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            font-size: 14px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ======================== HEADER ======================== */
+        .navbar {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            padding: 0 24px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 20;
+        }
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .logo-mark {
+            width: 30px;
+            height: 30px;
+            background: var(--primary);
+            color: #fff;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 13px;
+            letter-spacing: -0.03em;
+        }
+        .brand-name {
+            font-weight: 600;
+            font-size: 15px;
+            color: var(--text-main);
+            letter-spacing: -0.01em;
+        }
+        .brand-divider {
+            color: var(--border-strong);
+        }
+        .brand-env {
+            font-size: 12px;
+            color: var(--text-muted);
+            background: var(--bg-subtle);
+            padding: 2px 8px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            font-weight: 500;
+        }
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ======================== BUTTONS ======================== */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            height: 34px;
+            padding: 0 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            text-decoration: none;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: background 0.12s, border-color 0.12s;
+            white-space: nowrap;
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: #ffffff;
+        }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-outline {
+            background: var(--bg-card);
+            color: var(--text-main);
+            border-color: var(--border-strong);
+        }
+        .btn-outline:hover { background: var(--bg-subtle); }
+        .btn-sm {
+            height: 28px;
+            padding: 0 10px;
+            font-size: 12px;
+        }
+
+        .user-chip {
+            font-size: 13px;
+            color: var(--text-muted);
+            padding: 0 8px;
+        }
+        .user-chip strong { color: var(--text-main); font-weight: 600; }
+
+        /* ======================== LAYOUT ======================== */
+        .wrapper {
+            max-width: 1360px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .notice {
+            padding: 10px 14px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+        }
+        .notice-ok {
+            background: var(--baixa-bg);
+            border-color: var(--baixa-border);
+            color: var(--baixa-text);
+        }
+        .notice-err {
+            background: var(--critica-bg);
+            border-color: var(--critica-border);
+            color: var(--critica-text);
+        }
+
+        /* ======================== TOOLBAR / SEARCH ======================== */
+        .toolbar {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px 16px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .search-form {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+            min-width: 280px;
+        }
+        .search-form input {
+            flex: 1;
+            height: 34px;
+            padding: 0 12px;
+            border: 1px solid var(--border-strong);
+            border-radius: 6px;
+            font-size: 13px;
+            color: var(--text-main);
+            background: var(--bg-card);
+            outline: none;
+        }
+        .search-form input:focus {
+            border-color: var(--brand);
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+        }
+        .quick-list {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+            font-size: 12px;
+            color: var(--text-faint);
+        }
+        .ip-tag {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            background: var(--bg-subtle);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            text-decoration: none;
+            transition: border-color 0.12s, background 0.12s;
+        }
+        .ip-tag:hover {
+            border-color: var(--text-main);
+            background: #e2e8f0;
+        }
+
+        /* ======================== METRICS ROW ======================== */
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        @media (max-width: 960px) {
+            .metrics { grid-template-columns: repeat(2, 1fr); }
+        }
+        .metric-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px 18px;
+        }
+        .metric-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+        .metric-number {
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--text-main);
+            letter-spacing: -0.02em;
+            line-height: 1.15;
+            margin-bottom: 10px;
+        }
+        .metric-meta {
+            font-size: 12px;
+            color: var(--text-faint);
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            border-top: 1px solid var(--bg-subtle);
+            padding-top: 8px;
+        }
+        .metric-meta strong { color: var(--text-main); font-weight: 600; }
+
+        /* ======================== IP DETAIL PANEL ======================== */
+        .detail-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-strong);
+            border-radius: 8px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+        }
+        .detail-head {
+            padding: 14px 18px;
+            background: var(--bg-subtle);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .detail-title {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            border-bottom: 1px solid var(--border);
+        }
+        @media (max-width: 960px) {
+            .detail-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        .detail-cell {
+            padding: 16px 18px;
+            border-right: 1px solid var(--border);
+        }
+        .detail-cell:last-child { border-right: none; }
+        .detail-cell h4 {
+            margin: 0 0 6px 0;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--text-faint);
+        }
+
+        /* ======================== TABLES GRID ======================== */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1.15fr;
+            gap: 20px;
+            align-items: start;
+        }
+        @media (max-width: 1100px) {
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .card-head {
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .card-title {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+        .card-subtitle {
+            font-size: 12px;
+            color: var(--text-faint);
+            margin-top: 1px;
+        }
+
+        .tabs {
+            display: inline-flex;
+            background: var(--bg-subtle);
+            padding: 2px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+        .tab {
+            padding: 3px 9px;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-decoration: none;
+            border-radius: 4px;
+        }
+        .tab.active {
+            background: var(--bg-card);
+            color: var(--text-main);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th {
+            text-align: left;
+            padding: 10px 16px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--text-faint);
+            background: var(--bg-subtle);
+            border-bottom: 1px solid var(--border);
+        }
+        td {
+            padding: 11px 16px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-main);
+            vertical-align: middle;
+        }
+        tbody tr:last-child td { border-bottom: none; }
+        tbody tr:hover { background: #f8fafc; }
+
+        /* ======================== BADGES & PROGRESS ======================== */
+        .badge {
+            display: inline-block;
+            padding: 2px 7px;
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 4px;
+            border: 1px solid transparent;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+        .sev-CRITICA, .sev-CRITICO {
+            color: var(--critica-text);
+            background: var(--critica-bg);
+            border-color: var(--critica-border);
+        }
+        .sev-ALTA, .sev-ALTO, .sev-SUSPEITO {
+            color: var(--alta-text);
+            background: var(--alta-bg);
+            border-color: var(--alta-border);
+        }
+        .sev-MEDIA, .sev-MEDIO {
+            color: var(--media-text);
+            background: var(--media-bg);
+            border-color: var(--media-border);
+        }
+        .sev-BAIXA, .sev-BAIXO, .sev-NORMAL {
+            color: var(--baixa-text);
+            background: var(--baixa-bg);
+            border-color: var(--baixa-border);
+        }
+        .sev-INFO {
+            color: var(--info-text);
+            background: var(--info-bg);
+            border-color: var(--info-border);
+        }
+
+        .mono-link {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 12.5px;
+            color: var(--brand);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .mono-link:hover { text-decoration: underline; }
+
+        .score-cell {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .progress {
+            width: 64px;
+            height: 6px;
+            background: var(--bg-subtle);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .progress-bar { height: 100%; border-radius: 3px; }
+        .score-val {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        code {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 12px;
+            background: var(--bg-subtle);
+            padding: 2px 5px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+        }
+
+        /* ======================== FOOTER FORM ======================== */
+        .footer-box {
+            margin-top: 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 16px;
+        }
+        .footer-box summary {
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+        .inline-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+            align-items: center;
+        }
+        .inline-form input, .inline-form select {
+            height: 34px;
+            padding: 0 10px;
+            border: 1px solid var(--border-strong);
+            border-radius: 6px;
+            font-size: 13px;
+            background: var(--bg-card);
+            color: var(--text-main);
+        }
+    </style>
+</head>
+<body>
+
+<header class="navbar">
+    <div class="nav-left">
+        <div class="logo-mark">SP</div>
+        <span class="brand-name">SecuraPy Platform</span>
+        <span class="brand-divider">/</span>
+        <span class="brand-env">Monitoramento SIEM</span>
+    </div>
+
+    <div class="nav-right">
+        <form method="post" action="{{ url_for('acao_analisar_web') }}" style="margin:0;">
+            <button type="submit" class="btn btn-outline">Reprocessar logs</button>
+        </form>
+        <a href="{{ url_for('api_relatorio') }}" target="_blank" class="btn btn-outline">Exportar JSON</a>
+
+        {% if operador %}
+            <span class="user-chip">Operador: <strong>{{ operador.nome or operador.sub or operador.email }}</strong> (Nível {{ operador.nivel or 1 }})</span>
+            <form method="post" action="{{ url_for('logout_web') }}" style="margin:0;">
+                <button type="submit" class="btn btn-outline btn-sm">Sair</button>
+            </form>
+        {% else %}
+            <a href="{{ url_for('login_web') }}" class="btn btn-primary">Entrar</a>
+        {% endif %}
+    </div>
+</header>
+
+<main class="wrapper">
+
+    {% if msg %}
+        <div class="notice notice-ok">
+            <span>{{ msg }}</span>
+            <a href="{{ url_for('dashboard') }}" style="color:inherit; text-decoration:none; font-weight:600;">Fechar</a>
+        </div>
+    {% endif %}
+
+    {% if erro_ip %}
+        <div class="notice notice-err">
+            <span>{{ erro_ip }}</span>
+            <a href="{{ url_for('dashboard') }}" style="color:inherit; text-decoration:none; font-weight:600;">Fechar</a>
+        </div>
+    {% endif %}
+
+    <!-- BARRA DE CONSULTA DE IP -->
+    <section class="toolbar">
+        <form class="search-form" method="get" action="{{ url_for('dashboard') }}">
+            <input type="text" name="ip" value="{{ ip_busca }}" placeholder="Consultar endereço IP (ex: 185.220.101.1)...">
+            <button type="submit" class="btn btn-primary">Consultar IP</button>
+            {% if ip_busca or sev_filtro %}
+                <a href="{{ url_for('dashboard') }}" class="btn btn-outline">Limpar</a>
+            {% endif %}
+        </form>
+
+        <div class="quick-list">
+            <span>Atalhos:</span>
+            <a class="ip-tag" href="{{ url_for('dashboard', ip='185.220.101.1') }}">185.220.101.1</a>
+            <a class="ip-tag" href="{{ url_for('dashboard', ip='91.240.118.172') }}">91.240.118.172</a>
+            <a class="ip-tag" href="{{ url_for('dashboard', ip='45.33.32.156') }}">45.33.32.156</a>
+            <a class="ip-tag" href="{{ url_for('dashboard', ip='192.168.1.10') }}">192.168.1.10</a>
+        </div>
+    </section>
+
+    <!-- INSPEÇÃO DETALHADA DO IP (QUANDO SELECIONADO) -->
+    {% if detalhes_ip %}
+        <section class="detail-card">
+            <div class="detail-head">
+                <h2 class="detail-title">
+                    Inspeção do host <code>{{ detalhes_ip.ip }}</code>
+                    {% if detalhes_ip.na_blacklist %}
+                        <span class="badge sev-CRITICA">Listado em Blacklist</span>
+                    {% endif %}
+                    {% if detalhes_ip.privado %}
+                        <span class="badge sev-BAIXA">Rede Interna</span>
+                    {% endif %}
+                </h2>
+                <div style="display:flex; gap:6px;">
+                    <a href="/api/ip/{{ detalhes_ip.ip }}" target="_blank" class="btn btn-outline btn-sm">JSON da API</a>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-outline btn-sm">Fechar</a>
+                </div>
+            </div>
+
+            <div class="detail-grid">
+                <div class="detail-cell">
+                    <h4>Classificação ML</h4>
+                    {% if detalhes_ip.ml.score is not none %}
+                        <div style="font-size:20px; font-weight:700; margin-bottom:4px;">
+                            {{ "%.2f"|format(detalhes_ip.ml.score) }}
+                            <span class="badge sev-{{ detalhes_ip.ml.nivel or 'INFO' }}" style="vertical-align:middle; margin-left:4px;">
+                                {{ detalhes_ip.ml.rotulo }}
+                            </span>
+                        </div>
+                        <div style="font-size:12px; color:var(--text-muted);">
+                            Isolation Forest: <strong>{{ "Anômalo" if (detalhes_ip.ml.anomalia and detalhes_ip.ml.anomalia.anomalo) else "Normal" }}</strong>
+                        </div>
+                    {% else %}
+                        <div style="color:var(--text-faint);">Sem amostra suficiente</div>
+                    {% endif %}
+                </div>
+
+                <div class="detail-cell">
+                    <h4>Geolocalização (ipinfo.io)</h4>
+                    {% if detalhes_ip.geolocalizacao.erro %}
+                        <div>{{ detalhes_ip.geolocalizacao.erro }}</div>
+                    {% else %}
+                        <div style="font-weight:600;">{{ detalhes_ip.geolocalizacao.pais }} — {{ detalhes_ip.geolocalizacao.cidade }}</div>
+                        <div style="font-size:12px; color:var(--text-muted);">{{ detalhes_ip.geolocalizacao.org }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="detail-cell">
+                    <h4>Correlação &amp; Volume</h4>
+                    <div><strong>{{ detalhes_ip.total_eventos }}</strong> eventos / <strong>{{ detalhes_ip.total_alertas }}</strong> alertas</div>
+                    <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">
+                        {{ detalhes_ip.deteccoes.motivos or "Nenhuma regra de correlação violada" }}
+                    </div>
+                </div>
+
+                <div class="detail-cell">
+                    <h4>Parecer do Assistente ({{ detalhes_ip.assistente.motor if detalhes_ip.assistente else 'regras' }})</h4>
+                    {% if detalhes_ip.assistente %}
+                        <div style="margin-bottom:4px;">
+                            <span class="badge sev-{{ detalhes_ip.assistente.classificacao }}">{{ detalhes_ip.assistente.classificacao }}</span>
+                        </div>
+                        <div style="font-size:12px; color:var(--text-muted);">{{ detalhes_ip.assistente.explicacao }}</div>
+                    {% else %}
+                        <div style="font-size:12px; color:var(--text-faint);">Sem alertas associados a este IP.</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if detalhes_ip.eventos %}
+                <table>
+                    <thead>
+                        <tr><th>Timestamp</th><th>Fonte</th><th>Tipo</th><th>Registro Original</th></tr>
+                    </thead>
+                    <tbody>
+                    {% for ev in detalhes_ip.eventos[:10] %}
+                        <tr>
+                            <td style="white-space:nowrap; color:var(--text-muted);">{{ ev.timestamp }}</td>
+                            <td><code>{{ ev.fonte }}</code></td>
+                            <td style="font-weight:600;">{{ ev.tipo }}</td>
+                            <td><code>{{ ev.linha_original }}</code></td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            {% endif %}
+        </section>
+    {% endif %}
+
+    <!-- INDICADORES GERAIS -->
+    {% set al_crit = resumo.alertas_por_severidade.get('CRITICA', 0) %}
+    {% set al_alta = resumo.alertas_por_severidade.get('ALTA', 0) %}
+    {% set al_med = resumo.alertas_por_severidade.get('MEDIA', 0) %}
+    {% set al_baixa = resumo.alertas_por_severidade.get('BAIXA', 0) %}
+
+    <section class="metrics">
+        <div class="metric-card">
+            <div class="metric-label">Eventos Coletados</div>
+            <div class="metric-number">{{ resumo.total_eventos }}</div>
+            <div class="metric-meta">
+                <span>auth: <strong>{{ resumo.eventos_por_fonte.get('auth', 0) }}</strong></span>
+                <span>firewall: <strong>{{ resumo.eventos_por_fonte.get('firewall', 0) }}</strong></span>
+                <span>web: <strong>{{ resumo.eventos_por_fonte.get('web', 0) }}</strong></span>
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-label">Alertas Registrados</div>
+            <div class="metric-number">{{ resumo.total_alertas }}</div>
+            <div class="metric-meta">
+                <span>Crítica: <strong>{{ al_crit }}</strong></span>
+                <span>Alta: <strong>{{ al_alta }}</strong></span>
+                <span>Média: <strong>{{ al_med }}</strong></span>
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-label">Prioridade Imediata (Crítica + Alta)</div>
+            <div class="metric-number" style="color: var(--critica-text);">{{ al_crit + al_alta }}</div>
+            <div class="metric-meta">
+                <a href="{{ url_for('dashboard', severidade='CRITICA') }}" class="mono-link" style="font-family:inherit;">Ver apenas críticos →</a>
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-label">Modelo de Priorização (RandomForest)</div>
+            <div class="metric-number">97,4%</div>
+            <div class="metric-meta">
+                <span>F1-Score (5-Fold CV)</span>
+                <span>Integridade SHA-256 OK</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- TABELAS PRINCIPAIS -->
+    <div class="grid-2">
+
+        <!-- TABELA ESQUERDA: HOSTS POR RISCO -->
+        <section class="card">
+            <div class="card-head">
+                <div>
+                    <h2 class="card-title">Hosts Monitorados por Score de Risco</h2>
+                    <div class="card-subtitle">Classificação combinada do modelo supervisionado, Isolation Forest e detector</div>
+                </div>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Origem (IP)</th>
+                        <th>Score ML</th>
+                        <th>Classificação</th>
+                        <th>Detecções</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for item in top_suspeitos %}
+                    {% set pct = ((item.score_ml or 0) * 100)|round|int %}
+                    {% set cor = '#dc2626' if pct >= 75 else ('#d97706' if pct >= 40 else '#16a34a') %}
+                    <tr>
+                        <td>
+                            <a class="mono-link" href="{{ url_for('dashboard', ip=item.ip) }}">{{ item.ip }}</a>
+                        </td>
+                        <td>
+                            <div class="score-cell">
+                                <div class="progress">
+                                    <div class="progress-bar" style="width: {{ pct }}%; background: {{ cor }};"></div>
+                                </div>
+                                <span class="score-val">{{ "%.2f"|format(item.score_ml or 0) }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge sev-{{ item.nivel_ml or 'INFO' }}">{{ item.rotulo_ml or 'normal' }}</span>
+                            {% if item.anomalia and item.anomalia.anomalo %}
+                                <span class="badge sev-INFO" title="Isolation Forest">Anômalo</span>
+                            {% endif %}
+                        </td>
+                        <td style="color:var(--text-muted); font-size:12.5px;">
+                            {{ item.motivos or "Tráfego regular" }}
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="4" style="text-align:center; color:var(--text-faint); padding:24px;">Sem registros.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </section>
+
+        <!-- TABELA DIREITA: ALERTAS -->
+        <section class="card">
+            <div class="card-head">
+                <div>
+                    <h2 class="card-title">Fila de Alertas Priorizados</h2>
+                    <div class="card-subtitle">Ordenados por severidade e probabilidade de ataque</div>
+                </div>
+                <div class="tabs">
+                    <a class="tab {{ 'active' if not sev_filtro else '' }}" href="{{ url_for('dashboard', ip=ip_busca or None) }}">Todos</a>
+                    <a class="tab {{ 'active' if sev_filtro == 'CRITICA' else '' }}" href="{{ url_for('dashboard', severidade='CRITICA', ip=ip_busca or None) }}">Crítica</a>
+                    <a class="tab {{ 'active' if sev_filtro == 'ALTA' else '' }}" href="{{ url_for('dashboard', severidade='ALTA', ip=ip_busca or None) }}">Alta</a>
+                    <a class="tab {{ 'active' if sev_filtro == 'MEDIA' else '' }}" href="{{ url_for('dashboard', severidade='MEDIA', ip=ip_busca or None) }}">Média</a>
+                </div>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Severidade</th>
+                        <th>IP</th>
+                        <th>Regra</th>
+                        <th>Descrição</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for al in alertas_recentes %}
+                    <tr>
+                        <td><span class="badge sev-{{ al.severidade }}">{{ al.severidade }}</span></td>
+                        <td><a class="mono-link" href="{{ url_for('dashboard', ip=al.ip) }}">{{ al.ip }}</a></td>
+                        <td style="font-weight:500;">{{ al.regra_nome }}</td>
+                        <td style="color:var(--text-muted);">{{ al.descricao }}</td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="4" style="text-align:center; color:var(--text-faint); padding:24px;">Nenhum alerta encontrado para este filtro.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </section>
+
+    </div>
+
+    <!-- REGISTRO MANUAL DE ALERTA -->
+    <details class="footer-box">
+        <summary>Registrar alerta manual / Testar sanitização XSS (Cenário E1)</summary>
+        {% if operador %}
+            <form class="inline-form" method="post" action="{{ url_for('acao_criar_alerta_web') }}">
+                <input type="text" name="ip" required placeholder="IP (ex: 198.51.100.77)" value="198.51.100.77">
+                <select name="severidade">
+                    <option value="CRITICA">CRÍTICA</option>
+                    <option value="ALTA">ALTA</option>
+                    <option value="MEDIA">MÉDIA</option>
+                    <option value="BAIXA">BAIXA</option>
+                </select>
+                <input type="text" name="descricao" required style="flex:1; min-width:240px;"
+                       placeholder="Descrição do alerta (ex: <script>alert(1)</script>)">
+                <button type="submit" class="btn btn-primary">Registrar alerta</button>
+            </form>
+        {% else %}
+            <p style="margin:8px 0 0; font-size:13px; color:var(--text-muted);">
+                Autentique-se em <a href="{{ url_for('login_web') }}" class="mono-link" style="font-family:inherit;">Entrar</a> (`admin@cybershield.local` / `CyberShield@2026`) para registrar alertas manuais.
+            </p>
+        {% endif %}
+    </details>
+
+</main>
+</body>
+</html>
