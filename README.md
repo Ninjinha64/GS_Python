@@ -2,7 +2,8 @@
 
 **Disciplina:** Coding for Security  
 **Consultoria fictícia:** CyberShield Ltda.  
-**Abrangência:** 1º e 2º semestres (Núcleo reaproveitado do 1º sem + Persistência, Machine Learning, API REST, Dashboard Seguro, Docker e Assistente LLM do 2º sem).
+**Abrangência:** 1º e 2º semestres (Núcleo reaproveitado do 1º sem + Persistência, Machine Learning, API REST, Dashboard Seguro, Docker e Assistente LLM do 2º sem).  
+**Enunciado Oficial da Atividade:** [`gs_2semestre.md`](./gs_2semestre.md) — [Repositório do Professor (`fabioBaraDev/coding_for_security`)](https://github.com/fabioBaraDev/coding_for_security/blob/main/gs_2semestre.md)
 
 ---
 
