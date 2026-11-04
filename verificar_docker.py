@@ -27,29 +27,40 @@ CONTEINERES_ESPERADOS = (
     "securapy_mysql",
 )
 
-
 def inspecionar_conteineres(cliente_docker=None):
     """
-    Usa `docker.from_env()` (SDK docker-py) para listar contêineres e checar
-    se os 3 serviços da plataforma estão "running".
-    Retorna lista de dicts `[{"nome": ..., "imagem": ..., "status": ...}]`.
+    Lista os contêineres da plataforma usando o Docker SDK.
+    Retorna nome, imagem e status de cada serviço.
     """
     cliente = cliente_docker or docker.from_env()
     lista = cliente.containers.list(all=True)
+
     por_nome = {c.name: c for c in lista}
 
     relatorio = []
+
     for nome in CONTEINERES_ESPERADOS:
         cont = por_nome.get(nome)
+
         if cont is None:
-            relatorio.append({"nome": nome, "imagem": "-", "status": "ausente"})
+            relatorio.append({
+                "nome": nome,
+                "imagem": "-",
+                "status": "ausente"
+            })
         else:
-            tags = cont.image.tags if getattr(cont, "image", None) else []
+            atributos = getattr(cont, "attrs", {})
+            imagem = atributos.get("Config", {}).get("Image", "-")
+            if imagem == "-":
+                imagem = getattr(cont, "image", "-")
+                imagem = imagem if isinstance(imagem, str) else getattr(imagem, "short_id", "-")
+
             relatorio.append({
                 "nome": cont.name,
-                "imagem": tags[0] if tags else str(getattr(cont.image, "short_id", "-")),
-                "status": cont.status,
+                "imagem": imagem,
+                "status": cont.status
             })
+
     return relatorio
 
 
