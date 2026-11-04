@@ -56,11 +56,11 @@ def formatar_alerta(alerta, cor=True):
 class ServidorAlertas:
     def __init__(self, host="0.0.0.0", porta=None, porta_ingestao=None, host_ingestao="127.0.0.1"):
         self.host = host
-        self.porta = porta or settings.ALERTAS_PORTA
+        self.porta = settings.ALERTAS_PORTA if porta is None else porta
         self.host_ingestao = host_ingestao
-        self.porta_ingestao = porta_ingestao or settings.ALERTAS_PORTA_INGESTAO
-        self.clientes = {}                 # socket -> (ip, porta)
-        self.historico = deque(maxlen=50)  # últimos alertas (fila circular)
+        self.porta_ingestao = settings.ALERTAS_PORTA_INGESTAO if porta_ingestao is None else porta_ingestao
+        self.clientes = {}
+        self.historico = deque(maxlen=50)
         self.lock = threading.Lock()
         self.rodando = threading.Event()
         self._sockets = []
