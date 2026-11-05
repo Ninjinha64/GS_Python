@@ -22,13 +22,14 @@ Contrato do ALERTA (dict):
 import json
 import logging
 import os
+from typing import Any, Callable, Optional
 
 logger = logging.getLogger("securapy.regras")
 
-SEVERIDADES = ("CRITICA", "ALTA", "MEDIA", "BAIXA", "INFO")
+SEVERIDADES: tuple[str, ...] = ("CRITICA", "ALTA", "MEDIA", "BAIXA", "INFO")
 
 
-def carregar_regras(caminho_config):
+def carregar_regras(caminho_config: str) -> list[dict[str, Any]]:
     """
     Lê o arquivo regras.json e retorna lista de dicionários de regras.
     Trata: arquivo não encontrado, JSON inválido.
@@ -48,7 +49,7 @@ def carregar_regras(caminho_config):
     return []
 
 
-def classificar_severidade(pontuacao):
+def classificar_severidade(pontuacao: int) -> str:
     """
     Recebe pontuação numérica e retorna string de severidade.
     >= 9: CRITICA, >= 7: ALTA, >= 5: MEDIA, >= 3: BAIXA, < 3: INFO
@@ -64,7 +65,7 @@ def classificar_severidade(pontuacao):
     return "INFO"
 
 
-def _campo_detalhes(evento, chave):
+def _campo_detalhes(evento: dict[str, Any], chave: str) -> str:
     """Lê `chave=valor` do texto `detalhes` (formato da CP1)."""
     detalhes = evento.get("detalhes", "")
     marcador = f"{chave}="
@@ -74,15 +75,15 @@ def _campo_detalhes(evento, chave):
     return resto[0] if resto else ""
 
 
-def _usuario(evento):
+def _usuario(evento: dict[str, Any]) -> str:
     return evento.get("usuario") or _campo_detalhes(evento, "usuario")
 
 
-def _url(evento):
+def _url(evento: dict[str, Any]) -> str:
     return evento.get("url") or _campo_detalhes(evento, "url")
 
 
-def _porta(evento):
+def _porta(evento: dict[str, Any]) -> Optional[int]:
     porta = evento.get("porta")
     if isinstance(porta, int):
         return porta
@@ -92,25 +93,25 @@ def _porta(evento):
 
 # --- Uma função por condição (responsabilidade única) -----------------------
 
-def _cond_usuario_privilegiado(regra, evento):
+def _cond_usuario_privilegiado(regra: dict[str, Any], evento: dict[str, Any]) -> bool:
     return _usuario(evento) in regra.get("usuarios_alvo", [])
 
 
-def _cond_porta_critica(regra, evento):
+def _cond_porta_critica(regra: dict[str, Any], evento: dict[str, Any]) -> bool:
     return evento.get("tipo") == "BLOCK" and _porta(evento) in regra.get("portas_criticas", [])
 
 
-def _cond_padroes_url(regra, evento):
+def _cond_padroes_url(regra: dict[str, Any], evento: dict[str, Any]) -> bool:
     url = _url(evento).lower()
     return any(p.lower() in url for p in regra.get("padroes", []))
 
 
-def _cond_reconhecimento(regra, evento):
+def _cond_reconhecimento(regra: dict[str, Any], evento: dict[str, Any]) -> bool:
     url = _url(evento).lower()
     return any(u.lower() in url for u in regra.get("urls_suspeitas", []))
 
 
-CONDICOES = {
+CONDICOES: dict[str, Callable[[dict[str, Any], dict[str, Any]], bool]] = {
     "usuario_privilegiado": _cond_usuario_privilegiado,
     "porta_critica": _cond_porta_critica,
     "path_traversal": _cond_padroes_url,
@@ -119,7 +120,7 @@ CONDICOES = {
 }
 
 
-def avaliar_regra(regra, evento):
+def avaliar_regra(regra: dict[str, Any], evento: dict[str, Any]) -> Optional[dict[str, Any]]:
     """
     Avalia se um evento viola uma regra específica.
     Retorna dict de alerta ou None.
@@ -147,12 +148,12 @@ def avaliar_regra(regra, evento):
     }
 
 
-def aplicar_regras(eventos, regras):
+def aplicar_regras(eventos: list[dict[str, Any]], regras: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """
     Recebe lista de eventos e lista de regras.
     Retorna lista de alertas gerados.
     """
-    alertas = []
+    alertas: list[dict[str, Any]] = []
     for evento in eventos:
         for regra in regras:
             alerta = avaliar_regra(regra, evento)

@@ -15,11 +15,26 @@ Uso:
     python verificar_docker.py --url http://127.0.0.1:5000/api/health
 """
 import argparse
+import json
+import subprocess
 import sys
+from typing import Any, Optional
+import urllib.error
+import urllib.request
 
-import docker
-from docker.errors import DockerException
-import requests
+try:
+    import docker
+    from docker.errors import DockerException
+except ImportError:
+    docker = None  # type: ignore[assignment]
+
+    class DockerException(Exception):  # type: ignore[no-redef]
+        """Fallback quando o pacote docker-py não está instalado no Python local."""
+
+try:
+    import requests
+except ImportError:
+    requests = None  # type: ignore[assignment]
 
 CONTEINERES_ESPERADOS = (
     "securapy_app",
@@ -27,12 +42,56 @@ CONTEINERES_ESPERADOS = (
     "securapy_mysql",
 )
 
-def inspecionar_conteineres(cliente_docker=None):
+
+def _cliente_cli_docker() -> Any:
+    """Fallback que consulta a CLI `docker ps` quando `docker-py` não está instalado no host."""
+    try:
+        proc = subprocess.run(
+            ["docker", "ps", "-a", "--format", "{{.Names}}|{{.Image}}|{{.State}}"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=True,
+        )
+    except (OSError, subprocess.SubprocessError) as e:
+        raise DockerException(str(e)) from e
+
+    class _ContCLI:
+        def __init__(self, name: str, image: str, status: str) -> None:
+            self.name = name
+            self.image = image
+            self.status = status
+            self.attrs = {"Config": {"Image": image}}
+
+    itens = []
+    for linha in proc.stdout.strip().splitlines():
+        partes = linha.split("|")
+        if len(partes) == 3:
+            itens.append(_ContCLI(partes[0].strip(), partes[1].strip(), partes[2].strip()))
+
+    class _ContainersCLI:
+        @staticmethod
+        def list(all: bool = True) -> list[_ContCLI]:  # noqa: A002
+            return itens
+
+    class _ClienteCLI:
+        containers = _ContainersCLI()
+
+    return _ClienteCLI()
+
+
+def _obter_cliente_docker() -> Any:
+    if docker is not None:
+        return docker.from_env()
+    return _cliente_cli_docker()
+
+
+def inspecionar_conteineres(cliente_docker: Optional[Any] = None) -> list[dict[str, str]]:
     """
     Lista os contêineres da plataforma usando o Docker SDK.
     Retorna nome, imagem e status de cada serviço.
     """
-    cliente = cliente_docker or docker.from_env()
+    cliente = cliente_docker or _obter_cliente_docker()
     lista = cliente.containers.list(all=True)
 
     por_nome = {c.name: c for c in lista}
@@ -53,7 +112,9 @@ def inspecionar_conteineres(cliente_docker=None):
             imagem = atributos.get("Config", {}).get("Image", "-")
             if imagem == "-":
                 imagem = getattr(cont, "image", "-")
-                imagem = imagem if isinstance(imagem, str) else getattr(imagem, "short_id", "-")
+                if not isinstance(imagem, str):
+                    tags = getattr(imagem, "tags", None)
+                    imagem = tags[0] if tags else getattr(imagem, "short_id", "-")
 
             relatorio.append({
                 "nome": cont.name,
@@ -64,30 +125,39 @@ def inspecionar_conteineres(cliente_docker=None):
     return relatorio
 
 
-def verificar_api_http(url="http://127.0.0.1:5000/api/health", timeout=5):
+def verificar_api_http(url: str = "http://127.0.0.1:5000/api/health", timeout: int = 5) -> dict[str, Any]:
     """Testa se a API responde HTTP 200 (cenário F3)."""
+    if requests is not None:
+        try:
+            resp = requests.get(url, timeout=timeout)
+            return {"ok": resp.status_code == 200, "status_code": resp.status_code, "corpo": resp.json()}
+        except requests.RequestException as e:
+            return {"ok": False, "status_code": None, "erro": str(e)}
+
     try:
-        resp = requests.get(url, timeout=timeout)
-        return {"ok": resp.status_code == 200, "status_code": resp.status_code, "corpo": resp.json()}
-    except requests.RequestException as e:
+        with urllib.request.urlopen(url, timeout=timeout) as resp:  # noqa: S310
+            codigo = resp.getcode()
+            corpo = json.loads(resp.read().decode("utf-8"))
+            return {"ok": codigo == 200, "status_code": codigo, "corpo": corpo}
+    except (urllib.error.URLError, ValueError, OSError) as e:
         return {"ok": False, "status_code": None, "erro": str(e)}
 
 
-def _cliente_simulado():
+def _cliente_simulado() -> Any:
     """Cliente fake usado quando `--simular` é passado em máquina sem Docker."""
     class _Img:
-        def __init__(self, tag):
+        def __init__(self, tag: str) -> None:
             self.tags = [tag]
 
     class _Cont:
-        def __init__(self, name, tag):
+        def __init__(self, name: str, tag: str) -> None:
             self.name = name
             self.image = _Img(tag)
             self.status = "running"
 
     class _Containers:
         @staticmethod
-        def list(all=True):  # noqa: A002
+        def list(all: bool = True) -> list[_Cont]:  # noqa: A002
             return [
                 _Cont("securapy_app", "securapy_platform-securapy:latest"),
                 _Cont("securapy_mongo", "mongo:7.0"),
@@ -100,7 +170,7 @@ def _cliente_simulado():
     return _Cliente()
 
 
-def main(argv=None):
+def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(description="Verificação de contêineres Docker do SecuraPy Platform")
     parser.add_argument("--url", default="http://127.0.0.1:5000/api/health", help="URL de healthcheck da API")
     parser.add_argument("--simular", action="store_true", help="Simula daemon Docker caso não instalado localmente")
@@ -108,7 +178,7 @@ def main(argv=None):
 
     print("=== Verificação de Contêineres (Docker SDK / docker-py) ===")
     try:
-        cliente = _cliente_simulado() if args.simular else docker.from_env()
+        cliente = _cliente_simulado() if args.simular else _obter_cliente_docker()
         relatorio = inspecionar_conteineres(cliente)
     except DockerException as e:
         print(f"[AVISO] Daemon Docker não acessível nesta máquina ({type(e).__name__}).")

@@ -13,9 +13,10 @@ Destaques:
 
 Coleções: eventos | alertas | ameacas
 """
+from datetime import datetime, timezone
 import hashlib
 import logging
-from datetime import datetime, timedelta, timezone
+from typing import Any, Optional
 
 from bson import ObjectId
 from bson.errors import InvalidId
@@ -26,24 +27,24 @@ import settings
 
 logger = logging.getLogger("securapy.mongo")
 
-NIVEL_SEVERIDADE = {"CRITICA": 5, "ALTA": 4, "MEDIA": 3, "BAIXA": 2, "INFO": 1}
+NIVEL_SEVERIDADE: dict[str, int] = {"CRITICA": 5, "ALTA": 4, "MEDIA": 3, "BAIXA": 2, "INFO": 1}
 
 
 class RepositorioIndisponivel(Exception):
     """Banco fora do ar e fallback desabilitado."""
 
 
-def _agora():
+def _agora() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def hash_documento(*partes):
+def hash_documento(*partes: Any) -> str:
     """SHA-256 das partes — identifica um evento/alerta de forma determinística."""
     texto = "|".join("" if p is None else str(p) for p in partes)
     return hashlib.sha256(texto.encode("utf-8")).hexdigest()
 
 
-def normalizar_severidade(valor):
+def normalizar_severidade(valor: Any) -> Optional[str]:
     """'crítica', 'critica', 'CRITICA' → 'CRITICA'. Retorna None se inválido."""
     if not isinstance(valor, str):
         return None
@@ -51,7 +52,11 @@ def normalizar_severidade(valor):
     return texto if texto in NIVEL_SEVERIDADE else None
 
 
-def conectar_mongo(uri=None, nome_db=None, timeout_ms=2000):
+def conectar_mongo(
+    uri: Optional[str] = None,
+    nome_db: Optional[str] = None,
+    timeout_ms: int = 2000,
+) -> tuple[Any, str]:
     """
     Conecta ao MongoDB real. Se falhar e o fallback estiver ativo, usa
     mongomock (banco em memória com a mesma API do pymongo).
@@ -73,7 +78,7 @@ def conectar_mongo(uri=None, nome_db=None, timeout_ms=2000):
         return mongomock.MongoClient()[nome_db], "mongomock"
 
 
-def _serializar(doc):
+def _serializar(doc: Optional[dict[str, Any]]) -> Optional[dict[str, Any]]:
     """Converte documento do Mongo em dict JSON-friendly (ObjectId → id str)."""
     if doc is None:
         return None
@@ -88,7 +93,7 @@ def _serializar(doc):
 class MongoRepo:
     """Acesso a dados de eventos, alertas e ameaças."""
 
-    def __init__(self, db, modo="mongodb"):
+    def __init__(self, db: Any, modo: str = "mongodb") -> None:
         self.db = db
         self.modo = modo
         self.eventos = db["eventos"]
@@ -97,7 +102,7 @@ class MongoRepo:
         self.criar_indices()
 
     # ------------------------------------------------------------------ setup
-    def criar_indices(self):
+    def criar_indices(self) -> None:
         """Índices de consulta, unicidade (idempotência) e TTL (retenção)."""
         try:
             for colecao in (self.eventos, self.alertas):
@@ -114,7 +119,7 @@ class MongoRepo:
         except PyMongoError as e:
             logger.error("Falha ao criar índices: %s", type(e).__name__)
 
-    def ping(self):
+    def ping(self) -> bool:
         try:
             self.db.command("ping")
             return True
@@ -124,7 +129,7 @@ class MongoRepo:
             return self.modo == "mongomock"
 
     # ---------------------------------------------------------------- escrita
-    def salvar_eventos(self, eventos):
+    def salvar_eventos(self, eventos: list[dict[str, Any]]) -> dict[str, int]:
         """
         Upsert por hash (fonte + linha original): reingerir o mesmo log não
         duplica eventos. Retorna dict {"novos": N, "existentes": M}.
@@ -141,7 +146,11 @@ class MongoRepo:
             novos += 1 if res.upserted_id is not None else 0
         return {"novos": novos, "existentes": len(eventos) - novos}
 
-    def salvar_alertas(self, alertas, scores=None):
+    def salvar_alertas(
+        self,
+        alertas: list[dict[str, Any]],
+        scores: Optional[dict[str, float]] = None,
+    ) -> dict[str, int]:
         """
         Salva alertas (idempotente por hash). `scores` = {ip: score_ml} anexa a
         prioridade do ML em cada alerta. Retorna {"novos": N, "atualizados": M}.
@@ -160,14 +169,14 @@ class MongoRepo:
             sev = normalizar_severidade(al.get("severidade")) or "INFO"
             doc = {k: v for k, v in al.items() if k not in ("_id", "id")}
             doc.update(hash=h, severidade=sev, sev_nivel=NIVEL_SEVERIDADE[sev],
-                       score_risco=round(float(scores.get(al.get("ip"), 0.0)), 4),
+                       score_risco=round(float(scores.get(al.get("ip", ""), 0.0)), 4),
                        atualizado_em=agora)
             res = self.alertas.update_one(
                 {"hash": h}, {"$set": doc, "$setOnInsert": {"ingerido_em": agora}}, upsert=True)
             novos += 1 if res.upserted_id is not None else 0
         return {"novos": novos, "atualizados": len(alertas) - novos}
 
-    def criar_alerta(self, alerta):
+    def criar_alerta(self, alerta: dict[str, Any]) -> str:
         """Insere um alerta manual (POST /api/alertas). Retorna o id criado."""
         sev = normalizar_severidade(alerta.get("severidade")) or "INFO"
         doc = dict(alerta)
@@ -178,7 +187,7 @@ class MongoRepo:
         )
         return str(self.alertas.insert_one(doc).inserted_id)
 
-    def salvar_ameacas(self, ameacas):
+    def salvar_ameacas(self, ameacas: list[dict[str, Any]]) -> int:
         """Upsert do resumo por IP (detector + score ML)."""
         for am in ameacas:
             self.ameacas.update_one(
@@ -188,14 +197,14 @@ class MongoRepo:
             )
         return len(ameacas)
 
-    def atualizar_scores_alertas(self, scores):
+    def atualizar_scores_alertas(self, scores: dict[str, float]) -> None:
         """Reaplica o score de ML em todos os alertas dos IPs informados."""
         for ip, score in scores.items():
             self.alertas.update_many({"ip": ip}, {"$set": {"score_risco": round(float(score), 4)}})
 
     # ---------------------------------------------------------------- leitura
     @staticmethod
-    def _filtro_periodo(filtro, inicio, fim):
+    def _filtro_periodo(filtro: dict[str, Any], inicio: Optional[str], fim: Optional[str]) -> None:
         if inicio or fim:
             filtro["timestamp"] = {}
             if inicio:
@@ -203,10 +212,18 @@ class MongoRepo:
             if fim:
                 filtro["timestamp"]["$lte"] = fim
 
-    def buscar_eventos(self, fonte=None, tipo=None, ip=None, inicio=None, fim=None,
-                       pagina=1, tamanho=20):
+    def buscar_eventos(
+        self,
+        fonte: Optional[str] = None,
+        tipo: Optional[str] = None,
+        ip: Optional[str] = None,
+        inicio: Optional[str] = None,
+        fim: Optional[str] = None,
+        pagina: int = 1,
+        tamanho: int = 20,
+    ) -> tuple[list[Optional[dict[str, Any]]], int]:
         """Busca eventos com filtros e paginação. Retorna (lista, total)."""
-        filtro = {}
+        filtro: dict[str, Any] = {}
         if fonte:
             filtro["fonte"] = fonte
         if tipo:
@@ -221,13 +238,21 @@ class MongoRepo:
                   .skip((pagina - 1) * tamanho).limit(tamanho))
         return [_serializar(d) for d in cursor], total
 
-    def buscar_alertas(self, severidade=None, ip=None, origem=None, inicio=None, fim=None,
-                       pagina=1, tamanho=20):
+    def buscar_alertas(
+        self,
+        severidade: Optional[str] = None,
+        ip: Optional[str] = None,
+        origem: Optional[str] = None,
+        inicio: Optional[str] = None,
+        fim: Optional[str] = None,
+        pagina: int = 1,
+        tamanho: int = 20,
+    ) -> tuple[list[Optional[dict[str, Any]]], int]:
         """
         Busca alertas ordenados por PRIORIDADE (score de ML desc, depois
         severidade desc). Retorna (lista, total).
         """
-        filtro = {}
+        filtro: dict[str, Any] = {}
         if severidade:
             filtro["severidade"] = severidade
         if ip:
@@ -242,7 +267,7 @@ class MongoRepo:
                   .skip((pagina - 1) * tamanho).limit(tamanho))
         return [_serializar(d) for d in cursor], total
 
-    def obter_alerta(self, alerta_id):
+    def obter_alerta(self, alerta_id: str) -> Optional[dict[str, Any]]:
         """Retorna o alerta pelo id ou None (id malformado também → None)."""
         try:
             oid = ObjectId(alerta_id)
@@ -250,19 +275,19 @@ class MongoRepo:
             return None
         return _serializar(self.alertas.find_one({"_id": oid}, {"hash": 0}))
 
-    def obter_ameaca(self, ip):
+    def obter_ameaca(self, ip: str) -> Optional[dict[str, Any]]:
         return _serializar(self.ameacas.find_one({"ip": ip}))
 
-    def listar_ameacas(self, limite=10):
+    def listar_ameacas(self, limite: int = 10) -> list[Optional[dict[str, Any]]]:
         cursor = self.ameacas.find({}).sort([("score_ml", DESCENDING), ("pontuacao", DESCENDING)]).limit(limite)
         return [_serializar(d) for d in cursor]
 
-    def todos_eventos(self):
+    def todos_eventos(self) -> list[Optional[dict[str, Any]]]:
         """Todos os eventos (para treino do ML / relatório)."""
         return [_serializar(d) for d in self.eventos.find({}, {"hash": 0}).sort("timestamp", ASCENDING)]
 
     # ------------------------------------------------------------- agregações
-    def top_ips(self, limite=5, colecao="eventos"):
+    def top_ips(self, limite: int = 5, colecao: str = "eventos") -> list[dict[str, Any]]:
         """Top N IPs por quantidade de documentos."""
         pipeline = [
             {"$group": {"_id": "$ip", "total": {"$sum": 1}}},
@@ -272,17 +297,17 @@ class MongoRepo:
         alvo = self.eventos if colecao == "eventos" else self.alertas
         return [{"ip": d["_id"], "total": d["total"]} for d in alvo.aggregate(pipeline)]
 
-    def contagem_por_fonte(self):
+    def contagem_por_fonte(self) -> dict[str, int]:
         pipeline = [{"$group": {"_id": "$fonte", "total": {"$sum": 1}}}, {"$sort": {"_id": 1}}]
         return {d["_id"]: d["total"] for d in self.eventos.aggregate(pipeline)}
 
-    def contagem_por_severidade(self):
+    def contagem_por_severidade(self) -> dict[str, int]:
         pipeline = [{"$group": {"_id": "$severidade", "total": {"$sum": 1}}}]
         bruto = {d["_id"]: d["total"] for d in self.alertas.aggregate(pipeline)}
         # ordem fixa (CRITICA → INFO) para o dashboard
         return {sev: bruto.get(sev, 0) for sev in NIVEL_SEVERIDADE}
 
-    def resumo(self):
+    def resumo(self) -> dict[str, Any]:
         return {
             "total_eventos": self.eventos.count_documents({}),
             "total_alertas": self.alertas.count_documents({}),
@@ -290,13 +315,13 @@ class MongoRepo:
             "alertas_por_severidade": self.contagem_por_severidade(),
         }
 
-    def limpar(self):
+    def limpar(self) -> None:
         """Apaga tudo (usado pelos testes e pela migração com --limpar)."""
         for colecao in (self.eventos, self.alertas, self.ameacas):
             colecao.delete_many({})
 
 
-def criar_repo():
+def criar_repo() -> MongoRepo:
     """Fábrica: conecta (com fallback) e devolve um MongoRepo pronto."""
     db, modo = conectar_mongo()
     return MongoRepo(db, modo)

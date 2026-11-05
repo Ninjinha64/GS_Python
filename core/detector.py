@@ -12,18 +12,19 @@ Evoluções para a GS:
 """
 from collections import deque
 from datetime import datetime, timedelta
+from typing import Any, Iterable, Optional
 
 from core.regras import classificar_severidade
 
-FORMATO_TS = "%Y-%m-%d %H:%M:%S"
+FORMATO_TS: str = "%Y-%m-%d %H:%M:%S"
 
 # Blacklist de Threat Intelligence (set → busca O(1) e operações de conjunto)
-BLACKLIST_PADRAO = frozenset({"185.220.101.1", "45.33.32.156", "91.240.118.172", "23.94.5.100"})
+BLACKLIST_PADRAO: frozenset[str] = frozenset({"185.220.101.1", "45.33.32.156", "91.240.118.172", "23.94.5.100"})
 
-PESOS_SEVERIDADE = {"MEDIA": 5, "ALTA": 7, "CRITICA": 9}
+PESOS_SEVERIDADE: dict[str, int] = {"MEDIA": 5, "ALTA": 7, "CRITICA": 9}
 
 
-def _severidade_por_volume(qtd, limite_alta, limite_critica):
+def _severidade_por_volume(qtd: int, limite_alta: int, limite_critica: int) -> str:
     if qtd > limite_critica:
         return "CRITICA"
     if qtd > limite_alta:
@@ -31,12 +32,12 @@ def _severidade_por_volume(qtd, limite_alta, limite_critica):
     return "MEDIA"
 
 
-def detectar_brute_force(eventos, threshold=5):
+def detectar_brute_force(eventos: list[dict[str, Any]], threshold: int = 5) -> dict[str, dict[str, Any]]:
     """
     Conta tentativas FAIL por IP nos eventos de auth.
     Retorna dict: {ip: {"tentativas": N, "usuarios": [...], "severidade": "..."}}
     """
-    contagem = {}
+    contagem: dict[str, dict[str, Any]] = {}
     for evento in eventos:
         if evento.get("fonte") == "auth" and evento.get("tipo") == "FAIL":
             ip = evento.get("ip")
@@ -45,7 +46,7 @@ def detectar_brute_force(eventos, threshold=5):
             dados["tentativas"] += 1
             dados["usuarios"].add(usuario)
 
-    resultados = {}
+    resultados: dict[str, dict[str, Any]] = {}
     for ip, dados in contagem.items():
         if dados["tentativas"] >= threshold:
             resultados[ip] = {
@@ -57,14 +58,18 @@ def detectar_brute_force(eventos, threshold=5):
     return resultados
 
 
-def detectar_brute_force_janela(eventos, janela_segundos=60, threshold=5):
+def detectar_brute_force_janela(
+    eventos: list[dict[str, Any]],
+    janela_segundos: int = 60,
+    threshold: int = 5,
+) -> dict[str, dict[str, Any]]:
     """
     BÔNUS — correlação temporal.
     Para cada IP, desliza uma janela de `janela_segundos` sobre os FAILs
     ordenados por tempo e registra o pico de tentativas dentro da janela.
     Retorna dict: {ip: {"pico": N, "janela_s": S, "inicio": ts, "fim": ts}}
     """
-    por_ip = {}
+    por_ip: dict[str, list[datetime]] = {}
     for evento in eventos:
         if evento.get("fonte") == "auth" and evento.get("tipo") == "FAIL":
             try:
@@ -74,18 +79,18 @@ def detectar_brute_force_janela(eventos, janela_segundos=60, threshold=5):
             por_ip.setdefault(evento.get("ip"), []).append(ts)
 
     janela = timedelta(seconds=janela_segundos)
-    resultados = {}
+    resultados: dict[str, dict[str, Any]] = {}
     for ip, tempos in por_ip.items():
         tempos.sort()
-        fila = deque()
-        melhor = (0, None, None)
+        fila: deque[datetime] = deque()
+        melhor: tuple[int, Optional[datetime], Optional[datetime]] = (0, None, None)
         for ts in tempos:
             fila.append(ts)
             while ts - fila[0] > janela:
                 fila.popleft()
             if len(fila) > melhor[0]:
                 melhor = (len(fila), fila[0], ts)
-        if melhor[0] >= threshold:
+        if melhor[0] >= threshold and melhor[1] is not None and melhor[2] is not None:
             resultados[ip] = {
                 "pico": melhor[0],
                 "janela_s": janela_segundos,
@@ -96,12 +101,12 @@ def detectar_brute_force_janela(eventos, janela_segundos=60, threshold=5):
     return resultados
 
 
-def detectar_port_scan(eventos, threshold=3):
+def detectar_port_scan(eventos: list[dict[str, Any]], threshold: int = 3) -> dict[str, dict[str, Any]]:
     """
     Conta portas únicas (BLOCK) por IP nos eventos de firewall.
     Retorna dict: {ip: {"portas": [...], "quantidade": N, "severidade": "..."}}
     """
-    contagem = {}
+    contagem: dict[str, set[int]] = {}
     for evento in eventos:
         if evento.get("fonte") == "firewall" and evento.get("tipo") == "BLOCK":
             porta = evento.get("porta")
@@ -112,7 +117,7 @@ def detectar_port_scan(eventos, threshold=3):
                     continue
             contagem.setdefault(evento.get("ip"), set()).add(porta)
 
-    resultados = {}
+    resultados: dict[str, dict[str, Any]] = {}
     for ip, portas in contagem.items():
         if len(portas) >= threshold:
             resultados[ip] = {
@@ -124,7 +129,10 @@ def detectar_port_scan(eventos, threshold=3):
     return resultados
 
 
-def verificar_blacklist(eventos, blacklist=BLACKLIST_PADRAO):
+def verificar_blacklist(
+    eventos: list[dict[str, Any]],
+    blacklist: Iterable[str] = BLACKLIST_PADRAO,
+) -> tuple[set[str], dict[str, int]]:
     """
     Cruza IPs dos eventos com a blacklist usando operações de set.
     Retorna set de IPs maliciosos encontrados e dict com contagem por IP.
@@ -139,15 +147,20 @@ def verificar_blacklist(eventos, blacklist=BLACKLIST_PADRAO):
     return ips_encontrados, contagem
 
 
-def gerar_resumo_ameacas(brute_force, port_scan, ips_blacklist, contagem_blacklist):
+def gerar_resumo_ameacas(
+    brute_force: dict[str, dict[str, Any]],
+    port_scan: dict[str, dict[str, Any]],
+    ips_blacklist: Iterable[str],
+    contagem_blacklist: dict[str, int],
+) -> list[dict[str, Any]]:
     """
     Consolida todas as detecções em um resumo unificado.
     IPs que aparecem em múltiplas detecções têm severidade aumentada.
     Retorna lista de dicts ordenada por pontuação.
     """
-    resumo = {}
+    resumo: dict[str, dict[str, Any]] = {}
 
-    def acumular(ip, motivo, pontos):
+    def acumular(ip: str, motivo: str, pontos: int) -> None:
         item = resumo.setdefault(ip, {"motivos": [], "pontuacao": 0})
         item["motivos"].append(motivo)
         item["pontuacao"] += pontos
@@ -173,9 +186,14 @@ def gerar_resumo_ameacas(brute_force, port_scan, ips_blacklist, contagem_blackli
     return lista_resumo
 
 
-def alertas_do_detector(brute_force, port_scan, ips_blacklist, janela=None):
+def alertas_do_detector(
+    brute_force: dict[str, dict[str, Any]],
+    port_scan: dict[str, dict[str, Any]],
+    ips_blacklist: Iterable[str],
+    janela: Optional[dict[str, dict[str, Any]]] = None,
+) -> list[dict[str, Any]]:
     """Converte as detecções do detector em alertas (mesmo contrato do motor de regras)."""
-    alertas = []
+    alertas: list[dict[str, Any]] = []
     for ip, d in brute_force.items():
         alertas.append({
             "timestamp": None, "regra_id": "D001", "regra_nome": "Brute Force",

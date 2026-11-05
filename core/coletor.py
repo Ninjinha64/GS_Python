@@ -21,15 +21,16 @@ Contrato do EVENTO (dict) — "cola" entre os módulos:
 """
 import logging
 import os
+from typing import Any, Callable, Iterable, Optional
 
 logger = logging.getLogger("securapy.coletor")
 
-FONTES_VALIDAS = ("auth", "firewall", "web")
+FONTES_VALIDAS: tuple[str, ...] = ("auth", "firewall", "web")
 
 
-def _extrair_chave_valor(partes):
+def _extrair_chave_valor(partes: list[str]) -> dict[str, str]:
     """Converte ['usuario=admin', 'ip=1.2.3.4'] em {'usuario': 'admin', 'ip': '1.2.3.4'}."""
-    campos = {}
+    campos: dict[str, str] = {}
     for parte in partes:
         if "=" in parte:
             chave, valor = parte.split("=", 1)
@@ -37,7 +38,7 @@ def _extrair_chave_valor(partes):
     return campos
 
 
-def parsear_linha_auth(linha):
+def parsear_linha_auth(linha: str) -> dict[str, Any]:
     """Parseia uma linha do auth.log e retorna dict normalizado."""
     partes = linha.strip().split()
     if len(partes) < 5:
@@ -60,7 +61,7 @@ def parsear_linha_auth(linha):
     }
 
 
-def parsear_linha_firewall(linha):
+def parsear_linha_firewall(linha: str) -> dict[str, Any]:
     """Parseia uma linha do firewall.log e retorna dict normalizado."""
     partes = linha.strip().split()
     if len(partes) < 7:
@@ -85,7 +86,7 @@ def parsear_linha_firewall(linha):
     }
 
 
-def parsear_linha_web(linha):
+def parsear_linha_web(linha: str) -> dict[str, Any]:
     """Parseia uma linha do web_access.log e retorna dict normalizado."""
     partes = linha.strip().split()
     if len(partes) < 6:
@@ -111,14 +112,18 @@ def parsear_linha_web(linha):
 
 
 # Despacho por fonte (dict de funções em vez de if/elif encadeado)
-PARSERS = {
+PARSERS: dict[str, Callable[[str], dict[str, Any]]] = {
     "auth": parsear_linha_auth,
     "firewall": parsear_linha_firewall,
     "web": parsear_linha_web,
 }
 
 
-def parsear_linhas(linhas, fonte, origem="<memoria>"):
+def parsear_linhas(
+    linhas: Iterable[str],
+    fonte: str,
+    origem: str = "<memoria>",
+) -> tuple[list[dict[str, Any]], int]:
     """
     Parseia um iterável de linhas de uma fonte. Linhas malformadas são
     registradas e ignoradas (não travam a ingestão).
@@ -128,7 +133,7 @@ def parsear_linhas(linhas, fonte, origem="<memoria>"):
     if parser is None:
         raise ValueError(f"Fonte desconhecida: {fonte}")
 
-    eventos = []
+    eventos: list[dict[str, Any]] = []
     ignoradas = 0
     for num_linha, linha in enumerate(linhas, 1):
         linha = linha.strip()
@@ -142,7 +147,7 @@ def parsear_linhas(linhas, fonte, origem="<memoria>"):
     return eventos, ignoradas
 
 
-def carregar_log(caminho_arquivo, fonte):
+def carregar_log(caminho_arquivo: str, fonte: str) -> list[dict[str, Any]]:
     """
     Lê um arquivo de log e retorna lista de eventos normalizados.
     - caminho_arquivo: str com o path do arquivo
@@ -163,7 +168,7 @@ def carregar_log(caminho_arquivo, fonte):
     return []
 
 
-def identificar_fonte(nome_arquivo):
+def identificar_fonte(nome_arquivo: str) -> Optional[str]:
     """Deduz a fonte pelo nome do arquivo (auth/firewall/web) ou None."""
     nome = nome_arquivo.lower()
     for fonte in FONTES_VALIDAS:
@@ -172,12 +177,12 @@ def identificar_fonte(nome_arquivo):
     return None
 
 
-def carregar_todos_os_logs(pasta_logs):
+def carregar_todos_os_logs(pasta_logs: str) -> list[dict[str, Any]]:
     """
     Lê todos os arquivos de log da pasta e retorna lista unificada.
     Usa os.listdir() para encontrar os arquivos.
     """
-    todos_eventos = []
+    todos_eventos: list[dict[str, Any]] = []
     if not os.path.isdir(pasta_logs):
         logger.error("A pasta %s não existe.", pasta_logs)
         return todos_eventos

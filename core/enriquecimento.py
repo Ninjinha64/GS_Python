@@ -14,17 +14,18 @@ import logging
 import os
 import threading
 import time
+from typing import Any, Optional
 
 import requests
 
 logger = logging.getLogger("securapy.enriquecimento")
 
-TTL_CACHE_S = 3600
-_cache_global = {}
+TTL_CACHE_S: int = 3600
+_cache_global: dict[str, dict[str, Any]] = {}
 _lock = threading.Lock()
 
 
-def ip_valido(ip):
+def ip_valido(ip: Any) -> bool:
     """True se `ip` é um IPv4/IPv6 válido."""
     try:
         ipaddress.ip_address(str(ip))
@@ -33,7 +34,7 @@ def ip_valido(ip):
         return False
 
 
-def eh_ip_privado(ip):
+def eh_ip_privado(ip: Any) -> bool:
     """
     Verifica se um IP é de rede privada (RFC 1918), loopback ou link-local.
     Retorna False para IPs inválidos.
@@ -45,12 +46,12 @@ def eh_ip_privado(ip):
         return False
 
 
-def _consultar_ipinfo(ip):
+def _consultar_ipinfo(ip: str) -> dict[str, Any]:
     """Faz a chamada HTTP ao ipinfo.io. Retorna dict normalizado (ou com 'erro')."""
     if os.getenv("SECURAPY_OFFLINE") == "1":
         return {"ip": ip, "erro": "Modo offline (enriquecimento desativado)"}
 
-    params = {}
+    params: dict[str, str] = {}
     token = os.getenv("IPINFO_TOKEN")
     if token:
         params["token"] = token
@@ -81,7 +82,7 @@ def _consultar_ipinfo(ip):
     }
 
 
-def consultar_ip(ip, cache=None):
+def consultar_ip(ip: str, cache: Optional[dict[str, dict[str, Any]]] = None) -> dict[str, Any]:
     """
     Consulta ipinfo.io para obter dados do IP.
     Usa cache (dict) para evitar consultas repetidas.
@@ -98,8 +99,10 @@ def consultar_ip(ip, cache=None):
         return {"ip": ip, "erro": "IP inválido"}
 
     if eh_ip_privado(ip):
-        resultado = {"ip": ip, "cidade": "-", "regiao": "-", "pais": "Rede Interna",
-                     "org": "Local", "hostname": "-"}
+        resultado: dict[str, Any] = {
+            "ip": ip, "cidade": "-", "regiao": "-", "pais": "Rede Interna",
+            "org": "Local", "hostname": "-",
+        }
     else:
         resultado = _consultar_ipinfo(ip)
 
@@ -110,12 +113,15 @@ def consultar_ip(ip, cache=None):
     return resultado
 
 
-def enriquecer_alertas(alertas, cache=None):
+def enriquecer_alertas(
+    alertas: list[dict[str, Any]],
+    cache: Optional[dict[str, dict[str, Any]]] = None,
+) -> list[dict[str, Any]]:
     """
     Recebe lista de alertas e adiciona informações de geolocalização.
     Retorna NOVA lista (não altera a original).
     """
-    enriquecidos = []
+    enriquecidos: list[dict[str, Any]] = []
     for alerta in alertas:
         novo = dict(alerta)
         if alerta.get("ip"):
